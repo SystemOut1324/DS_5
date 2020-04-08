@@ -13,10 +13,12 @@
 import scrapy
 import string
 from urllib.parse import urljoin
+from datetime import datetime
 
 
 # urls passed to class(might not be optimal)
 ### ROBOTSTXT_OBEY = False write out this change used to scrape some parts of the website ###
+
 
 # get all links
 # response.xpath('//div[@id="mw-pages"]/div/div/div/ul/li/a/@href').extract()
@@ -110,13 +112,15 @@ class wikiSpider(scrapy.Spider):
     # get article content
     def parse_article(self, response):
         for info in response.xpath('//div[@id="content"]'):
-            yield {
+            yield { 
                 'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
             }
 
 
 
-
+# stringa from web can be "" or '' and that is the problem !!!!!!!!!!!!!!!!
+# response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/descendant::a/text()').getall()  get text and link text
+# response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/child::a/text()').getall()
 
 class testSpider(scrapy.Spider):
     name = "test"
@@ -133,7 +137,9 @@ class testSpider(scrapy.Spider):
     def parse(self, response):
         for info in response.xpath('//div[@id="content"]'):
             yield {
-                'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
+                # 'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
+                'content': info.xpath('//*div[@id="mw-content-text"]/div[@class=mw-parser-output]/p/text()').get(),
+                'content': info.xpath('/html/body/div[3]/div[3]/div[4]/div/p').get(),
             }
 
 class test2Spider(scrapy.Spider):
@@ -152,6 +158,31 @@ class test2Spider(scrapy.Spider):
                 'text': quote.xpath('./a/@href').get(),
             }
 
+class test3Spider(scrapy.Spider):
+    name = "test3"
+    def start_requests(self):
+        urls = [
+            'https://en.wikinews.org/wiki/A_policeman_is_killed_and_another_one_is_tortured_in_MST_camp,_in_Brazil',
+            
+            'https://en.wikinews.org/wiki/African_Union_refuses_to_arrest_Sudan%27s_President_for_war_crimes',
+        ]
+        for url in urls:
+            yield scrapy.Request(url=url, callback=self.parse)
+
+    # get article content
+    def parse(self, response):
+        # for info in response.xpath('//div[@id="content"]'):
+        yield {
+            'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
+            # 'publish_date': response.xpath('//strong[@class="published"]/text()').get(),
+            # 'url': response.request.url,
+            # 'content': "".join(response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/child::a/text()').getall()),
+            # 'categories': response.xpath('//div[@id="catlinks"]/div[@id="mw-normal-catlinks"]/ul/li/a/text()').getall(),
+            'sources_url': response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/a/@href').getall(),
+            'sources_wiki_page_url': response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/i/span/a/@href').getall(),
+            # 'scraped_at': datetime.today().strftime('%Y-%m-%d'),
+        }
+
 class QuotesSpider(scrapy.Spider):
     name = "quotes"
     start_urls = [
@@ -161,8 +192,8 @@ class QuotesSpider(scrapy.Spider):
     def parse(self, response):
         for quote in response.css('div.quote'):
             yield {
-                'text': quote.css('span.text::text').get(),
-                'author': quote.css('small.author::text').get(),
+                #'text': quote.css('span.text::text').get(),
+                #'author': quote.css('small.author::text').get(),
                 'tags': quote.css('div.tags a.tag::text').getall(),
             }
 
