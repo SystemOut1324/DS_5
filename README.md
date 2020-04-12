@@ -1,3 +1,21 @@
-# DS_5
+# DS_5 - "Politics and Conflict" spider
+> Scrapes articles from "Politics and Conflict" with a specific starting charater (A-Z) chosen by changing group_nr.
 
-just a test readme
+
+## Usage
+
+To install you need scrapy
+
+```sh
+pip install scrapy
+```
+Download repo and navigate to it with the terminal. From the terminal you can run any spider from wikiSpider.py file. The default spider is "wiki"
+
+To run wiki-spider with outputcsv write:
+```sh
+scrapy crawl wiki -o output.csv
+```
+
+## General usage
+
+The wiki-spider is setup to only get the first article for each 200-link-page as well as all metadata besides content. This can be changed in wikiSpider.py

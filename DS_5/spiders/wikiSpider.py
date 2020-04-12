@@ -17,9 +17,7 @@
 # write next page logic better
 # maybe remove char form items.py and itemLoader
 # l.add_xpath('char', '//*[@id="firstHeading"]/text()', Compose(lambda x: x[0:1])) - add char to item.py if you need it
-
-
-
+### ROBOTSTXT_OBEY = False write out this change used to scrape some parts of the website ###
 
 
 import string
@@ -31,9 +29,6 @@ from datetime import datetime
 from urllib.parse import urljoin
 from ..items import articleItem # location of item - used for scraped data structure
 
-# urls passed to class(might not be optimal)
-### ROBOTSTXT_OBEY = False write out this change used to scrape some parts of the website ###
-
 # creating urls for chars based on group _nr - change group_nr to generate start_urls
 group_nr = 1 # <- 
 urls =[]
@@ -41,7 +36,7 @@ for elm in "ABCDEFGHIJKLMNOPRSTUVWZABCDEFGHIJKLMNOPRSTUVWZ"[group_nr%23:group_nr
     print(elm)
     urls.append('https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from='+ elm)
 
-
+# main spider
 class wikiSpider(scrapy.Spider):
     name = "wiki"
 
@@ -49,10 +44,8 @@ class wikiSpider(scrapy.Spider):
     def start_requests(self):
 
         # urls used to spawn spider-instances
-
         global urls
-        
-        # urls = [
+        # urls = [ # test urls
         #     'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=A',
 
         #     # 'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=F',
@@ -126,27 +119,9 @@ class wikiSpider(scrapy.Spider):
         l.add_value('scraped_at', (datetime.today().strftime('%Y-%m-%d')) )
         yield l.load_item() # could use return/yield - no idea what changes
 
-
-class testSpider(scrapy.Spider):
+# test spider for an individual article
+class articleTestSpider(scrapy.Spider):
     name = "test"
-    def start_requests(self):
-        urls = [
-            'https://en.wikinews.org/wiki/A_policeman_is_killed_and_another_one_is_tortured_in_MST_camp,_in_Brazil',
-            
-            'https://en.wikinews.org/wiki/African_Union_refuses_to_arrest_Sudan%27s_President_for_war_crimes',
-        ]
-        for url in urls:
-            yield scrapy.Request(url=url, callback=self.parse)
-
-    # get article content
-    def parse(self, response):
-        for info in response.xpath('//div[@id="content"]'):
-            yield {
-                'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
-            }
-
-class test2Spider(scrapy.Spider):
-    name = "test2"
     def start_requests(self):
         urls = [
             'https://en.wikinews.org/wiki/A_policeman_is_killed_and_another_one_is_tortured_in_MST_camp,_in_Brazil',
