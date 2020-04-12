@@ -19,4 +19,4 @@ class articleItem(scrapy.Item):
     sources_url  = scrapy.Field()
     sources_wiki_page_url = scrapy.Field()
     scraped_at = scrapy.Field()
-    pass
+    # pass # not sure if needed
