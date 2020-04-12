@@ -9,7 +9,7 @@ To install you need scrapy
 ```sh
 pip install scrapy
 ```
-Download repo and navigate to it with the terminal. From the terminal you can run any spider from wikiSpider.py file. The default spider is "wiki"
+Download repo and navigate to it with the terminal. From the terminal you can run any spider written in wikiSpider.py. The default spider is "wiki"
 
 To run wiki-spider with outputcsv write:
 ```sh
