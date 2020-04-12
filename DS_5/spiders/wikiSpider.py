@@ -30,11 +30,11 @@ from urllib.parse import urljoin
 from ..items import articleItem # location of item - used for scraped data structure
 
 # creating urls for chars based on group _nr - change group_nr to generate start_urls
-group_nr = 1 # <- 
+group_nr = 1 # <- change to get correct article set
 urls =[]
-for elm in "ABCDEFGHIJKLMNOPRSTUVWZABCDEFGHIJKLMNOPRSTUVWZ"[group_nr%23:group_nr%23+10]:
-    print(elm)
-    urls.append('https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from='+ elm)
+for char in "ABCDEFGHIJKLMNOPRSTUVWZABCDEFGHIJKLMNOPRSTUVWZ"[group_nr%23:group_nr%23+10]:
+    print('https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from='+ char)
+    urls.append('https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from='+ char)
 
 # main spider
 class wikiSpider(scrapy.Spider):
@@ -78,7 +78,7 @@ class wikiSpider(scrapy.Spider):
         # get all article links ### change to only specifik char ie E articles ###
         if start_url[-1] == response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get(): # chek that current letter is on page
 
-            articles = response.xpath('//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href').getall() #### change back when all links are needed ('//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href')
+            articles = response.xpath('//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href').getall() #### change back when all links are needed ('//div[@id="mw-pages"]/div/div/div[1]/ul/li/a/@href')
             for a in articles:
                 url = urljoin(response.url, a)
                 yield scrapy.Request(url, callback=self.parse_article)
