@@ -8,7 +8,15 @@
 import scrapy
 
 
-class Ds5Item(scrapy.Item):
+class articleItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
+    title = scrapy.Field()
+    publish_date = scrapy.Field()
+    article_url = scrapy.Field()
+    content = scrapy.Field()
+    categories = scrapy.Field()
+    sources_url  = scrapy.Field()
+    sources_wiki_page_url = scrapy.Field()
+    scraped_at = scrapy.Field()
     pass

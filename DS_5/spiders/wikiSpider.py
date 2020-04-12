@@ -10,44 +10,59 @@
 
 #     REMOVE THIS AFTER USE
 
-import scrapy
-import string
-from urllib.parse import urljoin
-from datetime import datetime
+### TODO
+# write how to use this spider
+# change so all 200 links are used for scraping
+# calculate number for maxdepth 
+# write next page logic better
+# maybe remove char form items.py and itemLoader
+# l.add_xpath('char', '//*[@id="firstHeading"]/text()', Compose(lambda x: x[0:1])) - add char to item.py if you need it
 
+
+
+
+
+import string
+import scrapy
+from scrapy.loader import ItemLoader
+from scrapy.loader.processors import Join, Compose
+from datetime import datetime
+from urllib.parse import urljoin
+from ..items import articleItem # location of item - used for scraped data structure
 
 # urls passed to class(might not be optimal)
 ### ROBOTSTXT_OBEY = False write out this change used to scrape some parts of the website ###
 
+# creating urls for chars based on group _nr - change nr to real nr
+group_nr = 1
+urls =[]
+for elm in "ABCDEFGHIJKLMNOPRSTUVWZABCDEFGHIJKLMNOPRSTUVWZ"[group_nr%23:group_nr%23+10]:
+    print(elm)
+    urls.append('https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from='+ elm)
 
-# get all links
-# response.xpath('//div[@id="mw-pages"]/div/div/div/ul/li/a/@href').extract()
-# response.xpath('//div[@id="mw-pages"]/div/div/div/ul/li')  selector 
-# '//div[@id="mw-pages"]/a[2]' get link for next page
 
 class wikiSpider(scrapy.Spider):
     name = "wiki"
+
     # start urls for scraping
     def start_requests(self):
+
+        # urls used to spawn spider-instances
+
+        # global urls
+        
         urls = [
             'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=A',
 
-            #'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=F',
+            # 'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=F',
 
             # 'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&subcatfrom=F&filefrom=F&pageuntil=Gaddafi+loyalists+go+on+offensive%2C+rebels+pushed+back#mw-pages',
         ]
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
 
-    # Set the maximum depth### change later to larger number ###
-    maxdepth = 1;
-
-    # my own debug dump
-    debug_list = [
-        "### DEBUG DUMP ALL STEPS ###:",
-        "### DEBUG DUMP ALL STEPS ###:",
-        "### DEBUG DUMP ALL STEPS ###:",
-    ]
+    # Set the maximum depth ### change later to larger number ###
+    maxdepth = 5;
 
     def parse(self, response):
         """ Main method that parse downloaded pages. """
@@ -66,28 +81,20 @@ class wikiSpider(scrapy.Spider):
         if depth == 0:
             start_url = response.url
 
-        # if depth == 0:
-        #     orginal_url = response.url
-        # print("### DEBUG DUMP_B:", orginal_url, "orginal_url END ###")   
+        # get all article links ### change to only specifik char ie E articles ###
+        if start_url[-1] == response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get(): # chek that current letter is on page
 
-        # get all article links ### change to only specifik letters ie E articles ###
-        articles = response.xpath('//div[@id="mw-pages"]/div/div/div[1]/ul/li/a/@href').getall() #### change back when all links are needed ('//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href')
-        for a in articles:
-            # yield response.follow(a, callback=self.parse_article)
-            url = urljoin(response.url, a)
-            yield scrapy.Request(url, callback=self.parse_article)
-        print("### DEBUG DUMP_A:", len(articles), "num_of_links END ###")
-        print("### DEBUG DUMP_K:", start_url, "END ###")
-        print("### DEBUG DUMP_W:", start_url[-1], response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get(), "END ###")
+            articles = response.xpath('//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href').getall() #### change back when all links are needed ('//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href')
+            for a in articles:
+                url = urljoin(response.url, a)
+                yield scrapy.Request(url, callback=self.parse_article)
 
-
-        # Update the print logic to show what page contain a link to the
-        # current page, and what was the text of the link
+        ### DEBUG printing - used for locating spider behavior ###
         print("### DEBUG DUMP STEP:", depth, response.url, '<-', from_url, from_text, "END ###")
-        # tmp_str = "### DEBUG DUMP STEP:" + depth
+        print("### DEBUG DUMP start_url:", start_url[-1], response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get(), "num_of_links END ###")
 
         # Browse a tags only if maximum depth has not be reached
-        if depth < self.maxdepth and start_url[-1] != 2:
+        if depth < self.maxdepth and start_url[-1] == response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get():
             next_page = response.xpath('//div[@id="mw-pages"]/a[2]') # location of next link ### CHANGE LATER
             next_page_text = next_page.xpath("text()").get()
             next_page_link = next_page.xpath("@href").get()
@@ -104,23 +111,20 @@ class wikiSpider(scrapy.Spider):
                 # Meta information: start page for current crawler
                 request.meta['start'] = start_url
                 yield request
-        else:
-            # print all debug messages for each step
-            for debug_step in (self.debug_list):
-                print(*debug_step)
 
-    # get article content
+    # get article content - using scrapy itemLoader and Items
     def parse_article(self, response):
-        for info in response.xpath('//div[@id="content"]'):
-            yield { 
-                'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
-            }
+        l = ItemLoader(item=articleItem(), response=response) # create itemloader l - following is adding to Fields
+        l.add_xpath('title', '//*[@id="firstHeading"]/text()')
+        l.add_xpath('publish_date', '//strong[@class="published"]/text()')
+        l.add_value('article_url', response.request.url)
+        # l.add_xpath('content', '//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/child::a/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/text()', Join(' '))
+        l.add_xpath('categories', '//div[@id="catlinks"]/div[@id="mw-normal-catlinks"]/ul/li/a/text()')
+        l.add_xpath('sources_url', '//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/a/@href')
+        l.add_xpath('sources_wiki_page_url', '//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/i/span/a/@href')
+        l.add_value('scraped_at', (datetime.today().strftime('%Y-%m-%d')) )
+        yield l.load_item() # could use return/yield - no idea what changes
 
-
-
-# stringa from web can be "" or '' and that is the problem !!!!!!!!!!!!!!!!
-# response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/descendant::a/text()').getall()  get text and link text
-# response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/child::a/text()').getall()
 
 class testSpider(scrapy.Spider):
     name = "test"
@@ -137,51 +141,66 @@ class testSpider(scrapy.Spider):
     def parse(self, response):
         for info in response.xpath('//div[@id="content"]'):
             yield {
-                # 'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
-                'content': info.xpath('//*div[@id="mw-content-text"]/div[@class=mw-parser-output]/p/text()').get(),
-                'content': info.xpath('/html/body/div[3]/div[3]/div[4]/div/p').get(),
+                'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
             }
 
 class test2Spider(scrapy.Spider):
     name = "test2"
     def start_requests(self):
         urls = [
-            'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=F',
+            # 'https://en.wikinews.org/wiki/A_policeman_is_killed_and_another_one_is_tortured_in_MST_camp,_in_Brazil',
+            
+            # 'https://en.wikinews.org/wiki/African_Union_refuses_to_arrest_Sudan%27s_President_for_war_crimes',
+
+            # 'https://en.wikinews.org/wiki/B.C._elections_debate_fiery_but_not_conclusive',
+
+            'https://en.wikinews.org/wiki/A_1-year_long_strike_against_FMC_Novamed:_Women_workers_allege_unfair_treatment',
         ]
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
 
-    # get article content
+    # get article content - using scrapy itemLoader and Items
     def parse(self, response):
-        for quote in response.xpath('//div[@id="mw-pages"]/div/div/div/ul/li'):
-            yield {
-                'text': quote.xpath('./a/@href').get(),
-            }
+        l = ItemLoader(item=articleItem(), response=response) # define itemloader l
+        # l.add_xpath('title', '//*[@id="firstHeading"]/text()')
+        # l.add_xpath('publish_date', '//strong[@class="published"]/text()')
+        # l.add_value('article_url', response.request.url)
+        # l.add_xpath('content', '//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/child::a/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/text()', Join('--'))
+        # l.add_xpath('categories', '//div[@id="catlinks"]/div[@id="mw-normal-catlinks"]/ul/li/a/text()')
+        # l.add_xpath('sources_url', '//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/a/@href')
+        # l.add_xpath('sources_wiki_page_url', '//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/i/span/a/@href')
+        l.add_value('scraped_at', (datetime.today().strftime('%Y-%m-%d')) )
+        yield l.load_item() # could use return/yield - no idea what changes
 
 class test3Spider(scrapy.Spider):
     name = "test3"
     def start_requests(self):
         urls = [
-            'https://en.wikinews.org/wiki/A_policeman_is_killed_and_another_one_is_tortured_in_MST_camp,_in_Brazil',
+            # 'https://en.wikinews.org/wiki/A_policeman_is_killed_and_another_one_is_tortured_in_MST_camp,_in_Brazil',
             
-            'https://en.wikinews.org/wiki/African_Union_refuses_to_arrest_Sudan%27s_President_for_war_crimes',
+            # 'https://en.wikinews.org/wiki/African_Union_refuses_to_arrest_Sudan%27s_President_for_war_crimes',
+
+            # 'https://en.wikinews.org/wiki/B.C._elections_debate_fiery_but_not_conclusive',
+
+            'https://en.wikinews.org/wiki/A_1-year_long_strike_against_FMC_Novamed:_Women_workers_allege_unfair_treatment',
         ]
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
 
     # get article content
     def parse(self, response):
-        # for info in response.xpath('//div[@id="content"]'):
-        yield {
-            'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
-            # 'publish_date': response.xpath('//strong[@class="published"]/text()').get(),
-            # 'url': response.request.url,
-            # 'content': "".join(response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/child::a/text()').getall()),
-            # 'categories': response.xpath('//div[@id="catlinks"]/div[@id="mw-normal-catlinks"]/ul/li/a/text()').getall(),
-            'sources_url': response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/a/@href').getall(),
-            'sources_wiki_page_url': response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/i/span/a/@href').getall(),
-            # 'scraped_at': datetime.today().strftime('%Y-%m-%d'),
-        }
+        for info in response.xpath('//div[@id="content"]'):    
+            yield {
+                # 'title': info.xpath('//*[@id="firstHeading"]/text()').get(),
+                # 'publish_date': response.xpath('//strong[@class="published"]/text()').get(),
+                # 'url': response.request.url,
+                'content': "".join(response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/p/child::a/text()|//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/text()').getall()),
+                # 'categories': response.xpath('//div[@id="catlinks"]/div[@id="mw-normal-catlinks"]/ul/li/a/text()').getall(),
+                # 'sources_url': response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/a/@href').getall(),
+                # 'sources_wiki_page_url': response.xpath('//div[@id="mw-content-text"]/div[@class="mw-parser-output"]/ul/li/span/i/span/a/@href').getall(),
+                # 'scraped_at': datetime.today().strftime('%Y-%m-%d'),
+            }
+
 
 class QuotesSpider(scrapy.Spider):
     name = "quotes"
@@ -192,8 +211,8 @@ class QuotesSpider(scrapy.Spider):
     def parse(self, response):
         for quote in response.css('div.quote'):
             yield {
-                #'text': quote.css('span.text::text').get(),
-                #'author': quote.css('small.author::text').get(),
+                'text': quote.css('span.text::text').get(),
+                'author': quote.css('small.author::text').get(),
                 'tags': quote.css('div.tags a.tag::text').getall(),
             }
 
