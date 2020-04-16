@@ -11,12 +11,13 @@
 #     REMOVE THIS AFTER USE
 
 ### TODO
-# write how to use this spider
+# write how to use this spider. 
 # change so all 200 links are used for scraping
 # calculate number for maxdepth 
 # write next page logic better
 # maybe remove char form items.py and itemLoader
 # l.add_xpath('char', '//*[@id="firstHeading"]/text()', Compose(lambda x: x[0:1])) - add char to item.py if you need it
+# implement scraping policy !!!!!!
 ### ROBOTSTXT_OBEY = False write out this change used to scrape some parts of the website ###
 
 
@@ -33,9 +34,8 @@ from ..items import articleItem # location of item - used for scraped data struc
 group_nr = 1 # <- change to get correct article set
 urls =[]
 for char in "ABCDEFGHIJKLMNOPRSTUVWZABCDEFGHIJKLMNOPRSTUVWZ"[group_nr % 23:group_nr % 23+10]:
-    print('https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=' + char)
-    urls.append(
-        'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=' + char)
+    urls.append('https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=' + char)
+print(*urls, sep='\n')
 
 # main spider
 class wikiSpider(scrapy.Spider):
@@ -47,9 +47,9 @@ class wikiSpider(scrapy.Spider):
         # urls used to spawn spider-instances
         global urls
         # urls = [ # test urls
-        #     'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=A',
+        #     # 'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=A',
 
-        #     # 'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=F',
+        #     'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&from=F',
 
         #     # 'https://en.wikinews.org/w/index.php?title=Category:Politics_and_conflicts&subcatfrom=F&filefrom=F&pageuntil=Gaddafi+loyalists+go+on+offensive%2C+rebels+pushed+back#mw-pages',
         # ]
@@ -57,7 +57,7 @@ class wikiSpider(scrapy.Spider):
             yield scrapy.Request(url=url, callback=self.parse)
 
     # Set the maximum depth ### change later to larger number ###
-    maxdepth = 5;
+    maxdepth = 10
 
     def parse(self, response):
         """ Main method that parse downloaded pages. """
@@ -65,7 +65,7 @@ class wikiSpider(scrapy.Spider):
         start_url = ''
         from_url = ''
         from_text = ''
-        depth = 0;
+        depth = 0
         # Extract the meta information from the response, if any
         if 'start'  in response.meta: start_url = response.meta['start']
         if 'from'   in response.meta: from_url  = response.meta['from']
@@ -76,28 +76,25 @@ class wikiSpider(scrapy.Spider):
         if depth == 0:
             start_url = response.url
 
-        # get all article links ### change to only specifik char ie E articles ###
+        # get all article links
         if start_url[-1] == response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get(): # chek that current letter is on page
 
             # change back when all links are needed ('//div[@id="mw-pages"]/div/div/div[1]/ul/li/a/@href')
-            articles = response.xpath(
-                '//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href').getall()
+            articles = response.xpath('//div[@id="mw-pages"]/div/div/div[1]/ul/li[1]/a/@href').getall()
             for a in articles:
                 url = urljoin(response.url, a)
                 yield scrapy.Request(url, callback=self.parse_article)
 
         ### DEBUG printing - used for locating spider behavior ###
-        print("### DEBUG DUMP STEP:", depth, response.url,
-              '<-', from_url, from_text, "END ###")
-        print("### DEBUG DUMP start_url:", start_url[-1], response.xpath(
-            '//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get(), "num_of_links END ###")
+        print("### DEBUG DUMP STEP:", depth, response.url, '<-', from_url, from_text, "END ###",
+              "### DEBUG DUMP start_url:", start_url[-1], response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get(),"char_page END ###")
 
         # get nex_page only if maximum depth has not be reached and current char is still on page
         if depth < self.maxdepth and start_url[-1] == response.xpath('//div[@id="mw-pages"]/div/div/div[1]/h3/text()').get():
             next_page = response.xpath('//div[@id="mw-pages"]/a[2]') # location of next link
             next_page_text = next_page.xpath("text()").get()
             next_page_link = next_page.xpath("@href").get()
-            print("### DEBUG DUMP_C:", next_page, "next_page END ###")
+            print("### DEBUG DUMP next_page:", next_page, "END ###")
 
             if next_page_link is not None:
                 request = response.follow(next_page_link, callback=self.parse)
