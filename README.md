@@ -19,3 +19,8 @@ scrapy crawl wiki -o output.csv
 ## General usage
 
 The wiki-spider is setup to only get the first article for each 200-link-page as well as all metadata besides content. This can be changed in wikiSpider.py
+
+| Command | Description | Description |
+| --- | --- | --- |
+| `git status` | List all *new or modified* files |
+| `git diff` | Show file differences that **haven't been** staged |
